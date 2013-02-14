@@ -9,7 +9,7 @@ var requirejs = require('requirejs');
  * @param {String} [context] Require.js context, for running more than one Doppelganger app simultaneously
  * @constructor
  */
-var Doppelganger = function(html, configPath, context) {
+var Doppelganger = function Doppelganger(html, configPath, context) {
 	this._html = html;
 	this._configPath = configPath;
 	this._context = context || null;
