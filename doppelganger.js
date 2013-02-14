@@ -71,7 +71,7 @@ Doppelganger.prototype.init = function(callback) {
  * @return {RegExp|Boolean} The regular expression describing a matching route, or false if the path is invalid
  */
 Doppelganger.prototype.routeExists = function(path) {
-	return this._backbone && _(this._backbone.history.handlers).find(function(handler) { return handler.route.test(path); }) || false;
+	return this._backbone && ((!path && (this._backbone.history.handlers.length === 0)) || _(this._backbone.history.handlers).find(function(handler) { return handler.route.test(path); })) || false;
 };
 
 /**
@@ -79,7 +79,7 @@ Doppelganger.prototype.routeExists = function(path) {
  * @param {String} path The path to navigate to
  */
 Doppelganger.prototype.navigate = function(path) {
-	if (this.routeExists(path)) { this._backbone.history.navigate(path, true) }
+	if (this.routeExists(path) && (this._backbone.history.handlers.length !== 0)) { this._backbone.history.navigate(path, true) }
 };
 
 /**
