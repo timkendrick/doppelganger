@@ -1,0 +1,22 @@
+{
+	"name": "doppelganger",
+	"version": "0.1.0",
+	"author": {
+		"name": "Tim Kendrick",
+		"email": "timkendrick@gmail.com>",
+		"url": "https://github.com/timkendrick"
+	},
+	"desctiption": "Run Backbone.js apps on a Node.js server",
+	"main": "./tailbone",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/timkendrick/tailbone.git"
+	},
+	"dependencies": {
+		"jsdom": "0.4.x",
+		"requirejs": "2.1.x"
+	},
+	"engines": {
+		"node": ">=0.8"
+	}
+}
