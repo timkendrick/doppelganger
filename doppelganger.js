@@ -143,13 +143,12 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 		requirejs = requirejs.config(config);
 		
 		// jQuery relies on the global window variable, so expose that temporarily before we load jQuery
-		global.window = window;
+		_setGlobal('window', window);
 		
 		// Load in jQuery using the app's require.config
 		requirejs(['jquery'], function($) {
-			
 			// Now that jQuery has initialised, we can unset the global window variable
-			delete global.window;
+			_unsetGlobal('window');
 			
 			// Load in backbone using the app's require.config
 			requirejs(['backbone'], function(Backbone) {
@@ -164,7 +163,6 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 				if (rootDependencies) {
 					
 					requirejs(rootDependencies, function() {
-						
 						// The app is now up and running, so invoke the callback
 						if (callback) { callback(); }
 					});
@@ -203,29 +201,17 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 					 * @param {function} method The method to be modified
 					 * @param {object} globals Key-value hash of the required global variables and their values
 					 * @return {function} Modified version of the function that has access to the specified global variables
-					 */ 
+					 */
 					function _setGlobals(method, globals) {
 						return function() {
-							// Create a dictionary to keep track of which properties actually end up getting applied
-							var appliedProperties = {};
-							
-							// Apply the properties
-							for (var property in globals) {
-								// If another function has already set this global variable, leave well alone
-								if (property in global) { continue; }
-								
-								// Set the global variable
-								global[property] = globals[property];
-								
-								// Make a record that this property has been applied
-								appliedProperties[property] = globals[property];
-							}
+							// Apply the global properties
+							for (var property in globals) { _setGlobal(property, globals[property]); }
 							
 							// Call the overridden method
 							method.apply(this, arguments);
 							
-							// Unset all the global variables that we nded up setting 
-							for (var property in appliedProperties) { delete global[property]; }
+							// Unset the global properties 
+							for (var property in globals) { _unsetGlobal(property); }
 						}
 					}
 				}
@@ -233,5 +219,24 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 		});
 	});
 };
+
+var globals = {};
+
+function _setGlobal(property,value) {
+	if (property in globals) {
+		globals[property]++;
+	} else {
+		global[property] = value;
+		globals[property] = 1;
+	}
+}
+
+function _unsetGlobal(property) {
+	if (!(property in globals)) { return; }
+	if (--globals[property] === 0) {
+		delete global[property];
+		delete globals[property];
+	}
+}
 
 module.exports = Doppelganger;
