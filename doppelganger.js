@@ -55,14 +55,36 @@ Doppelganger.prototype._backbone = null;
  * @param {Function} callback Callback to invoke when the app is up and running
  */
 Doppelganger.prototype.init = function(callback) {
+	// Due to some dependencies (e.g. jQuery) relying on global variables, only one app can be initialised at once.
+	// If another app instance is currently initialising, add this one to the queue and bail out
+	if (initialising) {
+		initQueue.push({ app: this, callback: callback });
+		return;
+	} else {
+		initialising = true;
+	}
+	
 	// Get the base URL of the Require.js script directory
 	var requirejsPath = this._configPath.substr(0, this._configPath.lastIndexOf('/') + 1);
 	
 	// Use JSDOM to create a document element
 	this._document = this._createDOM(this._html);
 	
+	// Retain a reference to this instance for use in nested functions
+	var self = this;
+	
 	// Initialise the app through Require.js
-	this._initRequireJS(requirejs, requirejsPath, this._configPath, this._document, callback);
+	this._initRequireJS(requirejs, requirejsPath, this._configPath, this._document, _handleAppInitialised);
+	
+	
+	function _handleAppInitialised() {
+		initialising = false;
+		if (initQueue.length > 0) {
+			var queueItem = initQueue.shift();
+			queueItem.app.init(queueItem.callback);
+		}
+		if (callback) { callback(self); }
+	}
 };
 
 /**
@@ -220,6 +242,12 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 	});
 };
 
+// Variables used to ensure that only one app instance is initialised at once
+var initialising = false;
+var initQueue = [];
+
+// Some dependencies (e.g. jQuery) rely on certain globals (e.g. window) being present when they are loaded
+// These functions keep track of which ones have been set temporarily during app initialisation
 var globals = {};
 
 function _setGlobal(property,value) {

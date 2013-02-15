@@ -89,21 +89,17 @@ var html = appInstance.getHTML();
 
 ```javascript
 var mainAppInstance = new Doppelganger(fs.readFileSync('main/index.html', 'utf8'), 'main/js/config.js', 'main');
-var faqAppInstance = new Doppelganger(fs.readFileSync('faq/index.html', 'utf8'), 'faq/js/config.js', 'faq')
-var cmsAppInstance = new Doppelganger(fs.readFileSync('cms/index.html', 'utf8'), 'cms/js/config.js', 'cms')
+var faqAppInstance = new Doppelganger(fs.readFileSync('faq/index.html', 'utf8'), 'faq/js/config.js', 'faq');
 
-// Important: ensure that only one `init()` method is called at a time!
 mainAppInstance.init(function() {
 	console.log("Main app initialised");
-	
-	faqAppInstance.init(function() {
-		console.log("FAQ app initialised");
-		
-		cmsAppInstance.init(function() {
-			console.log("CMS app initialised");
-		});
-	});
-});
+	console.log(mainAppInstance.getHTML());
+);
+
+faqAppInstance.init(function() {
+	console.log("FAQ app initialised");
+	console.log(faqAppInstance.getHTML());
+);
 ```
 
 # Caveats to bear in mind when using Doppelganger
@@ -115,5 +111,4 @@ mainAppInstance.init(function() {
 	* Global browser variables such as `window`, `document`, and `history` will not be set. Avoid writing code that depends on the browser environment (although you do have access to jQuery for DOM manipulation, see below)
 	* The `$`, `_` and `Backbone` global variables will not be set. These should instead be accessed using Require.js (e.g. by listing `"jquery"` amongst a module's dependencies - this is good practice anyway).
 * When running multiple app instances simultaneously, each instance needs its own Require.js context. Be aware of the implications of using Require.js in multiversion mode.
-* When running multiple app instances simultaneously, only one instance's `init()` function can be called at a time
 * [JSDOM](https://github.com/tmpvar/jsdom) is used as the server-side DOM library
