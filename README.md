@@ -106,7 +106,7 @@ mainAppInstance.init(function() {
 });
 ```
 
-# Caveats when using Doppelganger
+# Caveats to bear in mind when using Doppelganger
 
 * The Backbone.js app must use Require.js to load its dependencies
 * The Doppelganger constructor expects to be passed a path to a config JavaScript file that includes a sole `require.config()` call, in order to initialise Require.js correctly
