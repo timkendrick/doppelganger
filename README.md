@@ -23,7 +23,7 @@ Doppelganger takes a Backbone.js app, and instantiates it 'behind the scenes' on
 When a request is made to the server, the following steps are typically carried out:
 
 1. The server checks through the routes that are registered within the Backbone app instance
-2. If it finds a route that matches the requested URL, it calls the app instance's `Backbone.history.navigate` method (or if no matching routes are found, the server responds appropriately)
+2. If it finds a route that matches the requested URL, it calls the app instance's `Backbone.history.navigate()` method (or if no matching routes are found, the server responds appropriately)
 3. This causes the server-side app instance to update its DOM hierarchy accordingly
 4. The server then gets an HTML version of the app instance's updated DOM hierarchy
 5. This HTML is then sent back as the response body
@@ -51,7 +51,7 @@ npm install doppelganger
 
 ## Instantiating a Doppelganger app
 
-The main Doppelganger class is packaged as a CommonJS module, so once it is installed you can use `require` to use it in another module:
+The main Doppelganger class is packaged as a CommonJS module, so once it is installed you can use `require()` to use it in another module:
 
 ```javascript
 var Doppelganger = require('doppelganger');
@@ -61,13 +61,6 @@ var appInstance = new Doppelganger(fs.readFileSync('index.html', 'utf8'), 'js/co
 
 // Initialise the app instance, passing a callback that is invoked when initialisation is complete 
 appInstance.init(function() { console.log('App initialised'); });
-```
-
-
-## Getting a Doppelganger app instance's current DOM state as HTML
-
-```javascript
-var html = appInstance.getHTML();
 ```
 
 
@@ -85,11 +78,14 @@ appInstance.navigate(route);
 ```
 
 
+## Getting a Doppelganger app instance's current DOM state as HTML
+
+```javascript
+var html = appInstance.getHTML();
+```
+
+
 ## Running multiple Doppelganger app instances simultaneously
-
-When running multiple app instances simultaneously, it is important to wait for the first app's `init()` method to complete before calling the `init()` function on another app instance. Only one `init()` method can be in progress at any one time.
-
-Also, a third `context` parameter must be passed into the Doppelganger constructor to dictate that app instance's Require.js context.
 
 ```javascript
 var mainAppInstance = new Doppelganger(fs.readFileSync('main/index.html', 'utf8'), 'main/js/config.js', 'main');
@@ -110,7 +106,7 @@ mainAppInstance.init(function() {
 });
 ```
 
-# Caveats
+# Caveats when using Doppelganger
 
 * The Backbone.js app must use Require.js to load its dependencies
 * The Doppelganger constructor expects to be passed a path to a config JavaScript file that includes a sole `require.config()` call, in order to initialise Require.js correctly
