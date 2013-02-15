@@ -25,8 +25,8 @@ When a request is made to the server, the following steps are typically carried 
 1. The server checks through the routes that are registered within the Backbone app instance
 2. If it finds a route that matches the requested URL, it calls the app instance's `Backbone.history.navigate()` method (or if no matching routes are found, the server responds appropriately)
 3. This causes the server-side app instance to update its DOM hierarchy accordingly
-4. The server then gets an HTML version of the app instance's updated DOM hierarchy
-5. This HTML is then sent back as the response body
+4. The server gets an HTML version of the app instance's updated DOM hierarchy
+5. This HTML is sent back as the response body
 
 These steps mean that with minimal effort, the single-page app will now be fully accessible without relying on any client-side scripting.
 
@@ -116,3 +116,4 @@ mainAppInstance.init(function() {
 	* The `$`, `_` and `Backbone` global variables will not be set. These should instead be accessed using Require.js (e.g. by listing `"jquery"` amongst a module's dependencies - this is good practice anyway).
 * When running multiple app instances simultaneously, each instance needs its own Require.js context. Be aware of the implications of using Require.js in multiversion mode.
 * When running multiple app instances simultaneously, only one instance's `init()` function can be called at a time
+* [JSDOM](https://github.com/tmpvar/jsdom) is used as the server-side DOM library
