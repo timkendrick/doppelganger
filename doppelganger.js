@@ -44,6 +44,13 @@ Doppelganger.prototype._context = null;
 Doppelganger.prototype._document = null;
 
 /**
+ * Version of Require.js that has been loaded into the app
+ * @type {Function}
+ * @private
+ */
+Doppelganger.prototype._requirejs = null;
+
+/**
  * Version of Backbone.js that has been loaded into the app
  * @type {Backbone}
  * @private
@@ -85,6 +92,18 @@ Doppelganger.prototype.init = function(callback) {
 		}
 		if (callback) { callback(self); }
 	}
+};
+
+/**
+ * Require dependencies from within the app instance using its version of Require.js.
+ * Arguments are passed through unmodified to the Require.js `require()` function.
+ * See the Require.js documentation for the possible syntax variations when calling the `require()` function.
+ * @param {...} arguments Arguments to pass to Require.js
+ * @return * Value returned from Require.js
+ */
+Doppelganger.prototype.require = function() {
+	if (!this._requirejs) { throw new Error("Doppelganger app has not yet been initialised"); }
+	return this._requirejs.apply(null, arguments);
 };
 
 /**
@@ -160,6 +179,9 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 		
 		// We're now ready to make the require.config call on the Require.js instance
 		requirejs = requirejs.config(config);
+		
+		// Now we've got the modified `require()` function specific to this configuration, retain it for future use
+		self._requirejs = requirejs;
 		
 		// jQuery relies on the global window variable, so expose that temporarily before we load jQuery
 		_setGlobal('window', window);

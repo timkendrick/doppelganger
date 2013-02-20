@@ -85,6 +85,17 @@ var html = appInstance.getHTML();
 ```
 
 
+## Interacting with the Backbone app using Require.js
+
+```javascript
+// This assumes 'app' and 'router' are AMD modules defined within the Backbone app
+appInstance.require(['app', 'router'], function(app, router) {
+	console.log(router.routes);
+	app.setUserDetails(userDetails);
+});
+```
+
+
 ## Running multiple Doppelganger app instances simultaneously
 
 ```javascript
