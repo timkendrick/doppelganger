@@ -103,23 +103,23 @@ var mainAppInstance = new Doppelganger(fs.readFileSync('main/index.html', 'utf8'
 var faqAppInstance = new Doppelganger(fs.readFileSync('faq/index.html', 'utf8'), 'faq/js/config.js', 'faq');
 
 mainAppInstance.init(function() {
-	console.log("Main app initialised");
+	console.log('Main app initialised');
 	console.log(mainAppInstance.getHTML());
 );
 
 faqAppInstance.init(function() {
-	console.log("FAQ app initialised");
+	console.log('FAQ app initialised');
 	console.log(faqAppInstance.getHTML());
 );
 ```
 
-# Caveats to bear in mind when using Doppelganger
+# Things to bear in mind when using Doppelganger
 
 * The Backbone.js app must use Require.js to load its dependencies
 * The Doppelganger constructor expects to be passed a path to a config JavaScript file that includes a sole `require.config()` call, in order to initialise Require.js correctly
-* Doppelganger expects Require.js paths to be set for `"jquery"` and `"backbone"` in the Require.js config file
+* Doppelganger expects Require.js paths to be set for `'jquery'` and `'backbone'` in the Require.js config file
 * The app code will not have access to any global variables:
 	* Global browser variables such as `window`, `document`, and `history` will not be set. Avoid writing code that depends on the browser environment (although you do have access to jQuery for DOM manipulation, see below)
-	* The `$`, `_` and `Backbone` global variables will not be set. These should instead be accessed using Require.js (e.g. by listing `"jquery"` amongst a module's dependencies - this is good practice anyway).
+	* The `$`, `_` and `Backbone` global variables will not be set. These should instead be accessed using Require.js (e.g. by listing `'jquery'` amongst a module's dependencies - this is good practice anyway).
 * When running multiple app instances simultaneously, each instance needs its own Require.js context. Be aware of the implications of using Require.js in multiversion mode.
 * [JSDOM](https://github.com/tmpvar/jsdom) is used as the server-side DOM library
