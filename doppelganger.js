@@ -93,7 +93,9 @@ Doppelganger.prototype.init = function(callback) {
  * @return {RegExp|Boolean} The regular expression describing a matching route, or false if the path is invalid
  */
 Doppelganger.prototype.routeExists = function(path) {
-	return this._backbone && ((!path && (this._backbone.history.handlers.length === 0)) || _(this._backbone.history.handlers).find(function(handler) { return handler.route.test(path); })) || false;
+	if (!this._backbone) { return false; }
+	if (this._backbone.history.handlers.length === 0 && !path) { return true; }
+	return _(this._backbone.history.handlers).find(function(handler) { return handler.route.test(path); }) || false;
 };
 
 /**
@@ -101,7 +103,9 @@ Doppelganger.prototype.routeExists = function(path) {
  * @param {String} path The path to navigate to
  */
 Doppelganger.prototype.navigate = function(path) {
-	if (this.routeExists(path) && (this._backbone.history.handlers.length !== 0)) { this._backbone.history.navigate(path, true) }
+	if (this.routeExists(path) && (this._backbone.history.handlers.length !== 0)) {
+		this._backbone.history.navigate(path, true)
+	}
 };
 
 /**
@@ -138,23 +142,16 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 	// Retain a reference to the current Doppelganger instance for use in nested functions
 	var self = this;
 	
+	// Some dependencies (e.g. jQuery) rely on certain globals (e.g. window) being present when they are loaded
+	// Create a dictionary to keep track of which ones have been set temporarily during app initialisation
+	var globals = {};
+	
 	// Load the Require.js config file as text, so that we can manipulate it without having to call it first
 	fs.readFile(configPath, 'utf8', function(error, data) {
 		if (error) { throw error; }
 		
-		// Parse the config file for a require.config(...) call, making note of the section between the parentheses
-		var configSearch = /require\s*\.\s*config\s*\(([^]+)\)/.exec(data);
-		
-		// Convert the config string to a JS object (hacky...)
-		var config = configSearch && new Function('return ' + configSearch[1] + ';')();
-		if (!config) { throw new Error('Invalid Require.js config file specified'); }
-		
-		// Add additional config parameters for server-side use
-		config.baseUrl = configPath.substr(0, configPath.lastIndexOf('/') + 1);
-		config.nodeRequire = require;
-		
-		// Set the Require.js context, if there is one specified
-		if (self._context) { config.context = self._context; }
+		// Parse the config file and return an updated config object
+		var config = _getConfigObject(data, configPath, self._context);
 		
 		// We'll need to perform some initialisation on jQuery and Backbone before loading in custom modules,
 		// so temporarily remove the core dependencies to prevent them loading in before this has been carried out
@@ -169,6 +166,7 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 		
 		// Load in jQuery using the app's require.config
 		requirejs(['jquery'], function($) {
+			
 			// Now that jQuery has initialised, we can unset the global window variable
 			_unsetGlobal('window');
 			
@@ -176,12 +174,12 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 			requirejs(['backbone'], function(Backbone) {
 				
 				// Perform various hacks to get Backbone working server-side
-				_initBackbone(Backbone, $);
+				_initBackbone(Backbone, $, window, document);
 				
 				// Retain a reference to the app's Backbone instance
 				self._backbone = Backbone;
 				
-				// Now we've fixed up Backbone and jQuery, we're ready to load in the app's main dependencies (if there are any)
+				// Now we've fixed up Backbone and jQuery, we're ready to load in the app's main dependencies
 				if (rootDependencies) {
 					
 					requirejs(rootDependencies, function() {
@@ -195,76 +193,117 @@ Doppelganger.prototype._initRequireJS = function(requirejs, baseURL, configPath,
 					if (callback) { callback(); }
 					
 				}
-				
-				
-				/**
-				 * Perform various hacks to get Backbone working server-side
-				 * @param {Backbone} Backbone Backbone instance loaded by Require.js
-				 * @param {jQuery} $ jQuery instance loaded by Require.js
-				 * @private
-				 */
-				function _initBackbone(Backbone, $) {
-					// The $ object was not made globally available to Backbone, so set it manually 
-					Backbone.$ = $;
-					
-					// The backbone history module relies on the location and history objects being set
-					Backbone.history.location = window.location;
-					Backbone.history.history = window.history;
-					
-					// Some of the backbone history methods rely on the top-level browser variables to function correctly.
-					// We need to override these with proxy methods that temporarily set these global variables while the function executes
-					Backbone.history.start = _setGlobals(Backbone.history.start, { window: window, navigator: window.navigator, document: document });
-					Backbone.history.stop = _setGlobals(Backbone.history.stop, { window: window });
-					Backbone.history.navigate = _setGlobals(Backbone.history.navigate, { document: document });
-					
-					
-					/**
-					 * Create a modified version of a function that temporarily exposes certain specified global variables
-					 * @param {function} method The method to be modified
-					 * @param {object} globals Key-value hash of the required global variables and their values
-					 * @return {function} Modified version of the function that has access to the specified global variables
-					 */
-					function _setGlobals(method, globals) {
-						return function() {
-							// Apply the global properties
-							for (var property in globals) { _setGlobal(property, globals[property]); }
-							
-							// Call the overridden method
-							method.apply(this, arguments);
-							
-							// Unset the global properties 
-							for (var property in globals) { _unsetGlobal(property); }
-						}
-					}
-				}
 			});	
 		});
+		
+		
+		function _getConfigObject(configFileData, configFilePath, context) {
+			// Parse the config file for a require.config(...) call, taking note of the section between the parentheses
+			var configSearch = /require\s*\.\s*config\s*\(([^]+)\)/.exec(configFileData);
+			
+			// Convert the config string to a JS object (hacky...)
+			var config = configSearch && new Function('return ' + configSearch[1] + ';')();
+			if (!config) { throw new Error('Invalid Require.js config file specified'); }
+			
+			// Add additional config parameters for server-side use
+			config.baseUrl = configFilePath.substr(0, configFilePath.lastIndexOf('/') + 1);
+			config.nodeRequire = require;
+			
+			// Set the Require.js context, if there is one specified
+			if (context) { config.context = context; }
+			
+			return config;
+		}
 	});
+	
+	
+	/**
+	 * Perform various hacks to get Backbone working server-side
+	 * @param {Backbone} Backbone Backbone instance loaded by Require.js
+	 * @param {jQuery} $ jQuery instance loaded by Require.js
+	 * @param {Window} window DOM window object
+	 * @param {Document} document DOM document object
+	 * @private
+	 */
+	function _initBackbone(Backbone, $, window, document) {
+		// The $ object was not made globally available to Backbone, so set it manually 
+		Backbone.$ = $;
+		
+		// The backbone history module relies on the location and history objects being set
+		Backbone.history.location = window.location;
+		Backbone.history.history = window.history;
+		
+		// Some of the backbone history methods rely on the top-level browser variables to function correctly.
+		// We need to override these with proxy methods that temporarily set these globals while the function executes
+		Backbone.history.start = _exposeGlobals(Backbone.history.start,
+			{
+				window: window,
+				navigator: window.navigator,
+				document: document
+			}
+		);
+		Backbone.history.stop = _exposeGlobals(Backbone.history.stop, { window: window });
+		Backbone.history.navigate = _exposeGlobals(Backbone.history.navigate, { document: document });
+	}
+	
+	/**
+	 * Set the value of a global variable.
+	 * Variables that have already been assigned a value using this function will not have their values updated.
+	 * @param {String} property Name of the global variable 
+	 * @param {*} value Value to assign to the global variable
+	 * @return {*} The updated value assigned to the global variable
+	 * @private
+	 */
+	function _setGlobal(property, value) {
+		if (property in globals) {
+			globals[property]++;
+		} else {
+			global[property] = value;
+			globals[property] = 1;
+		}
+		return global[property];
+	}
+	
+	/**
+	 * Unset a global variable that was previously assigned using the `_setGlobal()` function.
+	 * If the `_setGlobal()` function has been called more than once for this global variable name, the global variable 
+	 * will not be unset until this function has been called as many times as the `_setGlobal()` function was called.
+	 * @param {String} property Name of the global variable
+	 * @return {Boolean} `true` if the variable was deleted from the global names
+	 * @private
+	 */
+	function _unsetGlobal(property) {
+		if (!(property in globals)) { return false; }
+		if (--globals[property] === 0) {
+			delete global[property];
+			delete globals[property];
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Create a modified version of a function that temporarily exposes certain specified global variables
+	 * @param {function} method The method to be modified
+	 * @param {object} globals Key-value hash of the required global variables and their values
+	 * @return {function} Modified version of the function that has access to the specified global variables
+	 */
+	function _exposeGlobals(method, globals) {
+		return function() {
+			// Apply the global properties
+			for (var property in globals) { _setGlobal(property, globals[property]); }
+			
+			// Call the overridden method
+			method.apply(this, arguments);
+			
+			// Unset the global properties 
+			for (var property in globals) { _unsetGlobal(property); }
+		}
+	}
 };
 
 // Variables used to ensure that only one app instance is initialised at once
 var initialising = false;
 var initQueue = [];
-
-// Some dependencies (e.g. jQuery) rely on certain globals (e.g. window) being present when they are loaded
-// These functions keep track of which ones have been set temporarily during app initialisation
-var globals = {};
-
-function _setGlobal(property,value) {
-	if (property in globals) {
-		globals[property]++;
-	} else {
-		global[property] = value;
-		globals[property] = 1;
-	}
-}
-
-function _unsetGlobal(property) {
-	if (!(property in globals)) { return; }
-	if (--globals[property] === 0) {
-		delete global[property];
-		delete globals[property];
-	}
-}
 
 module.exports = Doppelganger;
